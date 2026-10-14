@@ -1,9 +1,5 @@
 # OV02C10 sensor data for the built-in camera
 
-Compiled only for boards that select `HOMETILES_CAMERA_SENSOR_OV02C10` in
-`src/video/local_camera/camera_select.h` (first: Guition JC8012P4A1 V2; camera
-beta builds also the V1 and the CSI connectors of the JC1060P470C V2 and the
-JC4880P443).
 
 ## Source
 
