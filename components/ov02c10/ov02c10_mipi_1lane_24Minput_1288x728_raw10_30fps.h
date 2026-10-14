@@ -4,6 +4,15 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 //cleaned_0x28_OV02C10_MIPI_24Minput_2lane_330Mbps_10bit_1920x1080_25fps
+#pragma once
+
+/* Driver-private: ESPHome auto-includes every component header into
+ * esphome.h, so the table is only emitted inside ov02c10.c. */
+#ifdef OV02C10_DRIVER_IMPL
+
+#include "ov02c10_regs.h"
+#include "ov02c10_types.h"
+
 static const ov02c10_reginfo_t ov02c10_mipi_2lane_24Minput_1288x728_raw10_10fps[] = {
     {0x0103, 0x01},
     {OV02C10_REG_SLEEP_MODE, 0x00},
@@ -234,3 +243,5 @@ static const ov02c10_reginfo_t ov02c10_mipi_2lane_24Minput_1288x728_raw10_10fps[
      {0x0100, 0x00},
      {OV02C10_REG_END, 0x00},
 };
+
+#endif  /* OV02C10_DRIVER_IMPL */

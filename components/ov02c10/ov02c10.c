@@ -4,6 +4,9 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+/* Unlocks the driver-private register tables (see ov02c10_settings.h). */
+#define OV02C10_DRIVER_IMPL 1
+
 #include "ov02c10_config.h"
 
 #include <string.h>

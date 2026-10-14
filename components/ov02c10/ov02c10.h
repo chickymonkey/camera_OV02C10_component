@@ -9,6 +9,7 @@
 extern "C" {
 #endif
 
+#include <stddef.h>
 #include "esp_cam_sensor_types.h"
 #include "ov02c10_types.h"
 

@@ -6,6 +6,9 @@
 
 #pragma once
 
+/* Driver-private; see note in the ov02c10_mipi_*.h tables. */
+#ifdef OV02C10_DRIVER_IMPL
+
 #include <stdio.h>
 #include <stdint.h>
 #include "ov02c10_config.h"
@@ -36,3 +39,5 @@ extern "C" {
 #ifdef __cplusplus
 }
 #endif
+
+#endif  /* OV02C10_DRIVER_IMPL */
