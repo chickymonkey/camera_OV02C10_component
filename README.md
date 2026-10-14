@@ -116,5 +116,3 @@ height swap, so swap the voip_stack and source sizes to match.
 - `OV02C10_SENSOR_NAME` in `ov02c10.h` has to be `"OV02C10"` to match the JSON's
   top-level key. If it isn't, the IPA settings are ignored and the image comes out
   washed out or green.
-- Auto-detect also tries SC202CS and OV5647 at address 0x36. Both fail harmlessly on
-  the chip-ID check before OV02C10 matches.
