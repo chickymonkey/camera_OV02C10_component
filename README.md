@@ -4,49 +4,41 @@ OV02C10 MIPI-CSI camera support for `esp_video_camera` (Psix-anp/esphome-esp-vid
 the camera component the esphome-intercom P4 video packages use. This is the sensor
 on the Guition JC8012P4A1 (ESP32-P4, 10.1").
 
-The driver comes from Guition's `video_lcd_display` demo. Here it's packaged as a
-standalone ESP-IDF component that registers itself in `esp_cam_sensor`'s auto-detect
-table, so you don't have to fork `esp_cam_sensor` or `esp_video_camera`.
+The driver comes from Guition's `video_lcd_display` demo
+(`components/esp_cam_sensor/sensors/ov02c10`). Here it's a standard ESPHome external
+component: the `.c`, `.cpp` and `.h` files sit directly in `components/ov02c10/` and
+ESPHome compiles them like any other component. `ov02c10.c` registers itself in
+`esp_cam_sensor`'s auto-detect table, so you don't have to fork `esp_cam_sensor` or
+`esp_video_camera`.
 
 ## Layout
 
 ```
 components/ov02c10/
-  __init__.py                      ESPHome glue: copies the IDF component into the build, sets Kconfig
-  idf/esp_cam_sensor_ov02c10/
-    CMakeLists.txt                 links ov02c10_detect into the auto-detect table
-    project_include.cmake          hands the IPA JSON to esp_ipa
-    Kconfig                        fixed copy of Kconfig.ov02c10
-    ov02c10.c                      Guition driver (AE logs moved to DEBUG)
-    cfg/ov02c10_default_p4_eco5.json
-    include/                       ov02c10.h, ov02c10_types.h
-    private_include/               ov02c10_settings.h, ov02c10_regs.h, 3 register tables
+  __init__.py                 ESPHome glue: YAML options, defines, IPA JSON hookup
+  ov02c10_driver.h / .cpp     small ESPHome component: keeps the driver linked, logs config
+  ov02c10_config.h            replaces Guition's Kconfig (lanes, gain limit, format index)
+  ov02c10.c                   Guition sensor driver
+  ov02c10.h, ov02c10_types.h
+  ov02c10_regs.h, ov02c10_settings.h
+  ov02c10_mipi_*.h            3 register tables (1-lane 1080p, 2-lane 1080p, 1288x728)
+  ov02c10_default_p4_eco5.json   Guition IPA tuning
 ```
 
-All driver sources come from Guition's `video_lcd_display/components/esp_cam_sensor/sensors/ov02c10`.
+### How it hooks in
 
-## Changes from the Guition original
-
-- Kconfig: the 1-lane and 2-lane 1080p "default format" entries both used the same
-  symbol (`..._DEFAULT_FMT_RAW10_1920X1080_30FPS`). That made the 2-lane mode
-  impossible to select. It's now two separate symbols.
-- Kconfig: every format defaulted to `n`, which leaves an empty format table. The
-  1-lane 1080p mode (the one the demo uses) is now on by default.
-- The `CONFIG_CAMERA_OV02C10_MAX_SUPPORT` macro was removed. It pointed at a symbol
-  that doesn't exist and nothing used it.
-- The exposure, gain and ioctl logs fired on every frame at INFO level. They're now
-  DEBUG, so they don't flood the ESPHome log and API.
-- The detect registration is now gated on `..._AUTO_DETECT_MIPI_INTERFACE_SENSOR`,
-  the same way upstream drivers do it.
-- `ov02c10.h` declared `sc2336_detect` (a copy-paste slip). It now declares `ov02c10_detect`.
-- `ov02c10_settings.h` pulled in all three register tables unconditionally, so unused
-  `static const` arrays would trip IDF's warnings-as-errors. Each table is now
-  included only when its mode is enabled.
-- `ov02c10.c` now includes `<stdlib.h>`, `<inttypes.h>` and `esp_heap_caps.h`
-  explicitly instead of relying on them coming in through other headers.
-- Note: Guition's `ov02c10_regs.h` labels 0x3508/0x3509 as digital gain and 0x350a as
-  analog gain. The Linux OV02C10 driver has those the other way round. The register
-  writes themselves are left exactly as Guition ships them.
+- **Build options.** The `lanes:` and `gain_limit:` YAML options become
+  `OV02C10_LANES` / `OV02C10_GAIN_LIMIT` in `esphome/core/defines.h`.
+  `ov02c10_config.h` turns them into the `CONFIG_CAMERA_OV02C10_*` names the driver
+  was written against. Only the register table for the selected mode is compiled in.
+- **Linking.** `OV02C10Driver::setup()` takes the address of `ov02c10_detect`. That
+  forces the linker to keep `ov02c10.c` and its `.esp_cam_sensor_detect_fn` entry,
+  which `esp_video_init()` scans when `esp_video_camera` starts.
+- **IPA tuning.** `esp_ipa` only picks up JSON files through `esp_cam_sensor`'s
+  per-sensor Kconfig options, and there isn't one for OV02C10. The JSON is therefore
+  routed through the OV5647 "customized IPA file" slot. The file's top-level key
+  (`"OV02C10"`) is what `esp_ipa` matches on, so it applies to the OV02C10. The only
+  side effect is that an OV5647 would lose its tuning, and there isn't one on this board.
 
 ## Step 1: camera-only bring-up
 
@@ -72,6 +64,8 @@ i2c:
 
 ov02c10:
   lanes: 1                # demo-validated; 2 is wired but untested
+  # gain_limit: 66016     # x1000; lower = less noise in low light
+  # ipa_json: my_tuning.json
 
 esp_video_camera:
   id: p4_camera
@@ -89,7 +83,8 @@ esphome:
       - lambda: 'id(p4_camera).set_runtime_hflip(true);'   # demo runs with hflip on
 ```
 
-It's working when the log shows `ov02c10: Detected Camera sensor PID=0x5602`, then
+At boot, `dump_config` should show `Detect hook: linked`. It's working when the log
+shows `ov02c10: Detected Camera sensor PID=0x5602`, then
 `Capture resolution: 1920x1080`, then JPEG frames at 960x540. The camera entity in
 Home Assistant should show a correctly coloured picture.
 
