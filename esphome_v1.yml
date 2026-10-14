@@ -1,0 +1,192 @@
+# Board: Guition ESP32-P4-M3-Dev
+# Definition: definitions/boards/guition_esp32_p4_m3_dev/manifest.yaml
+# =============================================================================
+# Guition JC8012P4A1C-I-W-Y (ESP32-P4 + ESP32-C6, 10.1" 800x1280 MIPI-DSI)
+# Pin map
+# Confidence: [SCH] = read from schematic, [COMM] = from working community
+#             YAMLs, [INF] = inferred, [?] = unknown
+# =============================================================================
+#
+# FUNCTION              SIGNAL                  PIN / VALUE            CONF
+# ----------------------------------------------------------------------------
+# Display               MIPI-DSI, 2 lanes       fixed DSI pins 34-40   [COMM]
+# Display               LCD reset               GPIO27                 [COMM]
+# Display               panel/PHY power         esp_ldo channel 3, 2.5V [COMM]
+# Backlight             LCD_PWM                 GPIO23                 [SCH]
+# Touch (GSL3680)       TOUCH_RST               GPIO22                 [SCH]
+# Touch (GSL3680)       TOUCH_INT               GPIO21                 [SCH]
+# I2C bus               SDA                     GPIO7                  [SCH]
+# I2C bus               SCL                     GPIO8                  [SCH]
+#                       (ES_I2C also ties to RTC SDA1/SCL1, codec, camera ctrl)
+# I2C scan results      0x18 ES8311 (probable)                         [INF]
+#                       0x32 RX8025T RTC (probable)                    [INF]
+#                       0x36 OV02C10 camera (probable)                 [INF]
+#                       0x40 GSL3680 touch (probable)                  [INF]
+# ES8311 I2S            MCLK                    GPIO13                 [SCH]
+# ES8311 I2S            SCLK / BCLK             GPIO12                 [SCH]
+# ES8311 I2S            LRCK                    GPIO10                 [SCH]
+# ES8311 I2S            DSDIN (speaker data)    GPIO9                  [SCH]
+# ES8311 I2S            ASDOUT (mic data)       GPIO11                 [SCH]
+# Microphone            MSM381A3729H9CP analog  into ES8311 MIC1P/N, mono [SCH]
+#                       (no ES7210 fitted; ES7210_* nets are leftover labels)
+# Speaker               NS4150 class-D amp      CN3 (SPEAKER_P/N)      [SCH]
+# Speaker amp enable    PA_CTRL                 GPIO20                 [SCH]
+#                       10K pull-down: amp off until driven.
+#                       Polarity (high = on) not verified - invert if silent. [?]
+# Wi-Fi/BT (ESP32-C6)   esp32_hosted reset      GPIO54                 [COMM]
+#                       (active_high: true)
+# Wi-Fi/BT (ESP32-C6)   SDIO CMD / CLK          GPIO19 / GPIO18        [COMM]
+# Wi-Fi/BT (ESP32-C6)   SDIO D0 D1 D2 D3        GPIO14 15 16 17        [COMM]
+# C6 recovery header    CN5 (TX, RX, IO9, CHIP_PU, 3V3, GND)           [SCH]
+# UART header           UART0 TX                GPIO37                 [SCH]
+# UART header           UART0 RX                GPIO38                 [SCH]
+#                       logger must use hardware_uart: USB_SERIAL_JTAG
+# Battery (if fitted)   voltage sense ADC       GPIO52                 [COMM]
+#                       ~1.8 V low, ~2.43 V full
+# Status LED            WS2812 data             GPIO26                 [INF]
+#                       read from screenshot, verify
+# TF / SD card          DAT0-3, CMD, CLK        GPIO39-GPIO44          [SCH]
+#                       powered from esp_ldo channel 4 (untested)
+# Expansion FPC3        GPIO2,3,4,5,45,46,47,48 + ES_I2C               [SCH]
+# Expansion FPC4        GPIO28-GPIO34                                  [SCH]
+# Power button SW1      IP5306 KEY pin (not a GPIO)                    [COMM]
+# Camera (OV02C10)      CSI DATAN0 / DATAP0     P4 pins 42 / 43        [SCH]
+# Camera                CSI CLKP / CLKN         P4 pins 44 / 45        [SCH]
+# Camera                CSI DATAN1 / DATAP1     P4 pins 46 / 47        [SCH]
+# Camera                CSI REXT                P4 pin 48 (4.02K to GND) [SCH]
+# Camera                CSI_IO0 / CSI_IO1       GPIO unknown           [?]
+#                       probably sensor reset and power-down
+#
+# Notes
+# - CSI pins are fixed in silicon; no YAML setting changes them.
+# - Check silicon revision first: V3 boards (P4 v3.x) need different
+#   display initialization than V1/V2.
+# - Open items: PA_CTRL polarity, ES8311 mic-input enable, CSI_IO0/IO1 GPIOs,
+#   OV02C10 driver support, software echo cancellation (no hardware loopback).
+# Camera (OV02C10, MIPI-CSI) - from Guition demo sdkconfig + sources
+#   Sensor control (SCCB) : I2C port 0, SDA GPIO7, SCL GPIO8, 100 kHz
+#   Sensor reset pin      : none (-1)
+#   Sensor power-down pin : none (-1)
+#   Sensor clock (XCLK)   : none (-1); module supplies 24 MHz itself (inferred)
+#   MIPI PHY power        : esp_ldo channel 3
+#   Default mode          : RAW10 1920x1080 30fps, 1 lane (2 lanes also wired)
+#   Orientation           : hflip on
+#   CSI_IO0 / CSI_IO1     : not used by the demo
+# If the sensor isn’t detected. You should see 0x36 on the I2C scan
+
+
+esphome:
+  name: guition-p4-101
+  friendly_name: Guition P4 10.1
+  on_boot:
+    priority: -100
+    then:
+      # The Guition demo runs the sensor mirrored; flip it back.
+      - lambda: 'id(p4_camera).set_runtime_hflip(true);'
+ 
+esp32:
+  variant: esp32p4
+  flash_size: 16MB
+  cpu_frequency: 360MHz
+  # P4 silicon revision: pre-v3 chips (v1.x, most early Guition boards) need
+  # engineering_sample: true. Set false for v3.x silicon. The boot log prints
+  # "chip revision: vX.Y" if you're not sure.
+  engineering_sample: true
+  framework:
+    type: esp-idf
+    advanced:
+      enable_idf_experimental_features: true
+    sdkconfig_options:
+      # The C6's esp-hosted slave firmware uses SDIO streaming RX mode; the host
+      # must match or SDIO init fails at boot.
+      CONFIG_ESP_HOSTED_SDIO_OPTIMIZATION_RX_STREAMING_MODE: "y"
+      # Put hosted task stacks and Wi-Fi/LwIP buffers in PSRAM so internal RAM
+      # stays free for SDIO, CSI and JPEG DMA.
+      CONFIG_ESP_HOSTED_DFLT_TASK_FROM_SPIRAM: "y"
+      CONFIG_SPIRAM_ALLOW_STACK_EXTERNAL_MEMORY: "y"
+      CONFIG_SPIRAM_TRY_ALLOCATE_WIFI_LWIP: "y"
+ 
+psram:
+  mode: hex
+  speed: 200MHz
+ 
+logger:
+  level: INFO
+ 
+# --- Wi-Fi through the ESP32-C6 co-processor --------------------------------
+esp32_hosted:
+  variant: ESP32C6
+  reset_pin: GPIO54
+  cmd_pin: GPIO19
+  clk_pin: GPIO18
+  d0_pin: GPIO14
+  d1_pin: GPIO15
+  d2_pin: GPIO16
+  d3_pin: GPIO17
+  active_high: true
+  use_psram: true
+ 
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  ap:
+    ssid: "${name} Fallback"
+ 
+captive_portal:
+ 
+api:
+  encryption:
+    key: !secret api_key
+ 
+ota:
+  - platform: esphome
+    password: !secret ota_key
+ 
+# --- Camera -----
+external_components:
+  - source: github://Psix-anp/esphome-esp-video-camera@main
+    components: [esp_video_camera]
+  - source: github://chickymonkey/camera_OV02C10_component@main
+    components: [ov02c10]
+    refresh: 0s          # re-pull while iterating; change to 1d once stable
+ 
+esp_ldo:
+  - channel: 3           # MIPI D-PHY supply
+    voltage: 2.5V
+ 
+i2c:
+  - id: internal_i2c
+    sda: GPIO7
+    scl: GPIO8
+    frequency: 100kHz    # demo value; try 400kHz once stable
+    scan: true
+ 
+ov02c10:
+  lanes: 1               # demo-validated; 2 lanes are wired but untested
+ 
+esp_video_camera:
+  id: p4_camera
+  name: Camera
+  i2c_id: internal_i2c
+  device: jpeg
+  resolution: 960x540    # exact 1/2 scale of the 1920x1080 sensor mode
+  max_framerate: 15
+  jpeg_quality: 10
+  enable_xclk: false     # camera module has its own 24 MHz oscillator
+ 
+# --- Diagnostics ----------------------------------------------------------------
+sensor:
+  - platform: wifi_signal
+    name: Wi-Fi Signal
+    update_interval: 30s
+  - platform: uptime
+    name: Uptime
+ 
+text_sensor:
+  - platform: wifi_info
+    ip_address:
+      name: IP Address
+ 
+button:
+  - platform: restart
+    name: Restart
