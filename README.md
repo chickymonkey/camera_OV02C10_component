@@ -66,6 +66,8 @@ ov02c10:
   lanes: 1                # demo-validated; 2 is wired but untested
   # gain_limit: 66016     # x1000; lower = less noise in low light
   # ipa_json: my_tuning.json
+  # horizontal_mirror: false   # mirror left/right in the sensor
+  # vertical_flip: false       # flip upside-down in the sensor
 
 esp_video_camera:
   id: p4_camera

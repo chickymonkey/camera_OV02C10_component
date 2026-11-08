@@ -950,6 +950,18 @@ static esp_err_t ov02c10_set_format(esp_cam_sensor_device_t *dev, const esp_cam_
         return ESP_CAM_SENSOR_ERR_FAILED_SET_FORMAT;
     }
     // ret = ov02c10_write(dev->sccb_handle, OV02C10_REG_AEC_AGC_CTL, 0xB8);
+
+    /* The format tables reset 0x3820/0x3821 (no mirror, no flip), so apply the
+     * orientation chosen in YAML (horizontal_mirror / vertical_flip) after them. */
+    ret = ov02c10_set_mirror(dev, OV02C10_HMIRROR);
+    ret |= ov02c10_set_vflip(dev, OV02C10_VFLIP);
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "Set orientation fail");
+        return ESP_CAM_SENSOR_ERR_FAILED_SET_FORMAT;
+    }
+    cam_ov02c10->ov02c10_para.hmirror_en = OV02C10_HMIRROR;
+    cam_ov02c10->ov02c10_para.vflip_en = OV02C10_VFLIP;
+
     dev->cur_format = format;
     // init para
     cam_ov02c10->ov02c10_para.exposure_val = dev->cur_format->isp_info->isp_v1_info.exp_def;

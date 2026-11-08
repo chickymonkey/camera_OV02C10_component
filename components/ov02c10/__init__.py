@@ -20,6 +20,8 @@ DEPENDENCIES = ["esp32"]
 CONF_LANES = "lanes"
 CONF_GAIN_LIMIT = "gain_limit"
 CONF_IPA_JSON = "ipa_json"
+CONF_HORIZONTAL_MIRROR = "horizontal_mirror"
+CONF_VERTICAL_FLIP = "vertical_flip"
 
 DEFAULT_IPA_JSON = Path(__file__).parent / "ov02c10_default_p4_eco5.json"
 IPA_BUILD_FILE = "ov02c10_ipa.json"
@@ -34,6 +36,10 @@ CONFIG_SCHEMA = cv.Schema(
         cv.Optional(CONF_LANES, default=1): cv.one_of(1, 2, int=True),
         cv.Optional(CONF_GAIN_LIMIT, default=66016): cv.int_range(min=4000, max=126016),
         cv.Optional(CONF_IPA_JSON): cv.file_,
+        # Applied in the sensor (0x3821 bit 1 / 0x3820 bit 1) every time the
+        # format table is loaded, so it survives stream restarts.
+        cv.Optional(CONF_HORIZONTAL_MIRROR, default=False): cv.boolean,
+        cv.Optional(CONF_VERTICAL_FLIP, default=False): cv.boolean,
     }
 ).extend(cv.COMPONENT_SCHEMA)
 
@@ -45,6 +51,8 @@ async def to_code(config):
     # Read by ov02c10_config.h (via esphome/core/defines.h).
     cg.add_define("OV02C10_LANES", config[CONF_LANES])
     cg.add_define("OV02C10_GAIN_LIMIT", config[CONF_GAIN_LIMIT])
+    cg.add_define("OV02C10_HMIRROR", 1 if config[CONF_HORIZONTAL_MIRROR] else 0)
+    cg.add_define("OV02C10_VFLIP", 1 if config[CONF_VERTICAL_FLIP] else 0)
 
     # IPA (ISP auto-exposure / white-balance / colour) tuning.
     # esp_ipa collects JSON files from esp_cam_sensor's per-sensor Kconfig
