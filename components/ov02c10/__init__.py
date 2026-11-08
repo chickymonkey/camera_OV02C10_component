@@ -36,7 +36,7 @@ CONFIG_SCHEMA = cv.Schema(
         cv.Optional(CONF_LANES, default=1): cv.one_of(1, 2, int=True),
         cv.Optional(CONF_GAIN_LIMIT, default=66016): cv.int_range(min=4000, max=126016),
         cv.Optional(CONF_IPA_JSON): cv.file_,
-        # Applied in the sensor (0x3821 bit 1 / 0x3820 bit 1) every time the
+        # Applied in the sensor (0x3820 bit 3 / bit 4) every time the
         # format table is loaded, so it survives stream restarts.
         cv.Optional(CONF_HORIZONTAL_MIRROR, default=False): cv.boolean,
         cv.Optional(CONF_VERTICAL_FLIP, default=False): cv.boolean,

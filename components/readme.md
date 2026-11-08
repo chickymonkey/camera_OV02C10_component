@@ -24,7 +24,8 @@ recomputes both hashes.
 `ov02c10_sensor.cpp` re-implements only the register
 access the demo driver performs: chip ID `0x300A/0x300B == 0x5602`, reset
 and format tables, the stream on/off sequence (`0x4800`, `0x3002`, `0x3010`,
-`0x300D`, `0x0100`) and horizontal mirror (`0x3821` bit 1). The demo's
+`0x300D`, `0x0100`) and horizontal mirror (`0x3821` bit 1; this bit has no effect on the
+OV02C10, so this component uses `0x3820` bit 3 instead). The demo's
 OV5640-style AE-target and banding registers (`0x3A0x`, `0x3C0x`, PLL reads at
 `0x3034..0x3037`) are deliberately not written.
 

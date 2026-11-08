@@ -718,14 +718,34 @@ static esp_err_t ov02c10_set_stream(esp_cam_sensor_device_t *dev, int enable)
     return ret;
 }
 
+/*
+ * Orientation. On the OV02C10 both live in 0x3820 (ROTATE_CONTROL): bit 3 =
+ * horizontal mirror, bit 4 = vertical flip (as in the mainline Linux ov02c10
+ * driver). The vendor demo's 0x3821 bit 1 / 0x3820 bit 1 are OV5640-style
+ * registers and have no visible effect on this sensor.
+ *
+ * Mirroring/flipping changes which colour the first pixel is, so the ISP
+ * window start (0x3811 X / 0x3813 Y, table defaults 0x07 / 0x04) moves by one
+ * pixel to keep the Bayer order GBRG that the format entry declares.
+ */
+#define OV02C10_REG_ROTATE_CTRL   0x3820
+#define OV02C10_REG_ISP_X_WIN_L   0x3811
+#define OV02C10_REG_ISP_Y_WIN_L   0x3813
+#define OV02C10_ISP_X_WIN_DEFAULT 0x07
+#define OV02C10_ISP_Y_WIN_DEFAULT 0x04
+
 static esp_err_t ov02c10_set_mirror(esp_cam_sensor_device_t *dev, int enable)
 {
-    return ov02c10_set_reg_bits(dev->sccb_handle, 0x3821, 1, 1,  enable ? 0x01 : 0x00);
+    esp_err_t ret = ov02c10_set_reg_bits(dev->sccb_handle, OV02C10_REG_ROTATE_CTRL, 3, 1, enable ? 0x01 : 0x00);
+    ret |= ov02c10_write(dev->sccb_handle, OV02C10_REG_ISP_X_WIN_L, OV02C10_ISP_X_WIN_DEFAULT - (enable ? 1 : 0));
+    return ret;
 }
 
 static esp_err_t ov02c10_set_vflip(esp_cam_sensor_device_t *dev, int enable)
 {
-    return ov02c10_set_reg_bits(dev->sccb_handle, 0x3820, 1, 1, enable ? 0x01 : 0x00);
+    esp_err_t ret = ov02c10_set_reg_bits(dev->sccb_handle, OV02C10_REG_ROTATE_CTRL, 4, 1, enable ? 0x01 : 0x00);
+    ret |= ov02c10_write(dev->sccb_handle, OV02C10_REG_ISP_Y_WIN_L, OV02C10_ISP_Y_WIN_DEFAULT - (enable ? 1 : 0));
+    return ret;
 }
 
 static esp_err_t ov02c10_set_exp_val(esp_cam_sensor_device_t *dev, uint32_t u32_val)
@@ -961,6 +981,14 @@ static esp_err_t ov02c10_set_format(esp_cam_sensor_device_t *dev, const esp_cam_
     }
     cam_ov02c10->ov02c10_para.hmirror_en = OV02C10_HMIRROR;
     cam_ov02c10->ov02c10_para.vflip_en = OV02C10_VFLIP;
+    {
+        uint8_t rot = 0, xw = 0, yw = 0;
+        ov02c10_read(dev->sccb_handle, OV02C10_REG_ROTATE_CTRL, &rot);
+        ov02c10_read(dev->sccb_handle, OV02C10_REG_ISP_X_WIN_L, &xw);
+        ov02c10_read(dev->sccb_handle, OV02C10_REG_ISP_Y_WIN_L, &yw);
+        ESP_LOGI(TAG, "Orientation: mirror=%d flip=%d (0x3820=0x%02X 0x3811=0x%02X 0x3813=0x%02X)",
+                 OV02C10_HMIRROR, OV02C10_VFLIP, rot, xw, yw);
+    }
 
     dev->cur_format = format;
     // init para
