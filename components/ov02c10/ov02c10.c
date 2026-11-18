@@ -543,12 +543,12 @@ static const esp_cam_sensor_format_t ov02c10_format_info_mipi[] = {
         .xclk = 24000000,
         .width = 1288,
         .height = 728,
-        .regs = ov02c10_mipi_2lane_24Minput_1288x728_raw10_10fps,
-        .regs_size = ARRAY_SIZE(ov02c10_mipi_2lane_24Minput_1288x728_raw10_10fps),
+        .regs = ov02c10_mipi_1lane_24Minput_1288x728_raw10_30fps,
+        .regs_size = ARRAY_SIZE(ov02c10_mipi_1lane_24Minput_1288x728_raw10_30fps),
         .fps = 30,
         .isp_info = &ov02c10_isp_info_mipi[0],
         .mipi_info = {
-            .mipi_clk = 400000000,
+            .mipi_clk = 405000000,  // same PLL setup as the 1-lane 1920x1080 mode
             .lane_num = 1,
             .line_sync_en = false,
         },

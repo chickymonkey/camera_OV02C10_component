@@ -22,6 +22,7 @@ CONF_GAIN_LIMIT = "gain_limit"
 CONF_IPA_JSON = "ipa_json"
 CONF_HORIZONTAL_MIRROR = "horizontal_mirror"
 CONF_VERTICAL_FLIP = "vertical_flip"
+CONF_MODE = "mode"
 
 DEFAULT_IPA_JSON = Path(__file__).parent / "ov02c10_default_p4_eco5.json"
 IPA_BUILD_FILE = "ov02c10_ipa.json"
@@ -40,8 +41,21 @@ CONFIG_SCHEMA = cv.Schema(
         # format table is loaded, so it survives stream restarts.
         cv.Optional(CONF_HORIZONTAL_MIRROR, default=False): cv.boolean,
         cv.Optional(CONF_VERTICAL_FLIP, default=False): cv.boolean,
+        # Sensor output. 1288x728 is a centre crop of the 1080p mode (about
+        # 2/3 of the field of view, no binning): its capture buffers take
+        # ~3.7 MB of PSRAM instead of ~8.3 MB. 1 lane only.
+        cv.Optional(CONF_MODE, default="1920x1080"): cv.one_of("1920x1080", "1288x728", lower=True),
     }
 ).extend(cv.COMPONENT_SCHEMA)
+
+
+def _validate(config):
+    if config[CONF_MODE] == "1288x728" and config[CONF_LANES] != 1:
+        raise cv.Invalid("mode 1288x728 is only available with lanes: 1")
+    return config
+
+
+CONFIG_SCHEMA = cv.All(CONFIG_SCHEMA, _validate)
 
 
 async def to_code(config):
@@ -53,6 +67,7 @@ async def to_code(config):
     cg.add_define("OV02C10_GAIN_LIMIT", config[CONF_GAIN_LIMIT])
     cg.add_define("OV02C10_HMIRROR", 1 if config[CONF_HORIZONTAL_MIRROR] else 0)
     cg.add_define("OV02C10_VFLIP", 1 if config[CONF_VERTICAL_FLIP] else 0)
+    cg.add_define("OV02C10_MODE_1288X728", 1 if config[CONF_MODE] == "1288x728" else 0)
 
     # IPA (ISP auto-exposure / white-balance / colour) tuning.
     # esp_ipa collects JSON files from esp_cam_sensor's per-sensor Kconfig

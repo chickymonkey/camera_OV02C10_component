@@ -16,12 +16,13 @@ void OV02C10Driver::dump_config() {
                 "OV02C10 sensor driver:\n"
                 "  SCCB address: 0x%02X\n"
                 "  Expected PID: 0x%04X\n"
-                "  MIPI lanes: %d (1920x1080 RAW10 30fps)\n"
+                "  MIPI lanes: %d (%s RAW10 30fps)\n"
                 "  Gain limit: %d (x1000)\n"
                 "  Horizontal mirror: %s\n"
                 "  Vertical flip: %s\n"
                 "  Detect hook: %s",
-                OV02C10_SCCB_ADDR, OV02C10_PID, OV02C10_LANES, OV02C10_GAIN_LIMIT,
+                OV02C10_SCCB_ADDR, OV02C10_PID, OV02C10_LANES,
+                OV02C10_MODE_1288X728 ? "1288x728 centre crop" : "1920x1080", OV02C10_GAIN_LIMIT,
                 YESNO(OV02C10_HMIRROR), YESNO(OV02C10_VFLIP),
                 this->detect_fn_ != nullptr ? "linked" : "MISSING");
 }

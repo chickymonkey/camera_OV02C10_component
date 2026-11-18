@@ -68,6 +68,8 @@ ov02c10:
   # ipa_json: my_tuning.json
   # horizontal_mirror: false   # mirror left/right in the sensor
   # vertical_flip: false       # flip upside-down in the sensor
+  # mode: 1288x728        # centre crop (~2/3 field of view): ~3.7 MB of capture
+  #                       # buffers instead of ~8.3 MB; pair with resolution: 966x546
 
 esp_video_camera:
   id: p4_camera
